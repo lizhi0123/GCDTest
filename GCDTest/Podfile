@@ -6,8 +6,8 @@ target 'GCDTest' do
   # use_frameworks!
 
   # Pods for GCDTest
-  pod 'AFNetworking', '~> 3.2.1'
-   pod 'MJRefresh', '~> 3.1.15.3'
+  pod 'AFNetworking', '~> 3.1.0'
+   pod 'MJRefresh', '~> 3.1.15.1'
 
   target 'GCDTestTests' do
     inherit! :search_paths

@@ -31,17 +31,30 @@
     self.mainTable.dataSource = self;
     
     
-    
-    //    MJRefreshHeader MJRefreshNormalHeader
     MJRefreshNormalHeader *header = [MJRefreshNormalHeader headerWithRefreshingBlock:^{
-        [self requestAll_GCDGroup];
+        switch (self.type) {
+            case 0:
+            {
+                [self requestAll_GCDGroup];
+            }
+                break;
+            case 1:
+            {
+                 [self requestAll_GCDSemaphore];
+            }
+                break;
+                
+            default:
+                break;
+        }
+        
     }];
     _mainTable.mj_header = header;
     header.lastUpdatedTimeLabel.hidden  = YES;
     [_mainTable.mj_header beginRefreshing];
     
 }
-
+//方法一：
 -(void)requestAll_GCDGroup{
 // 方法一： GCD的leave和enter    我们利用dispatch_group_t创建队列组，手动管理group关联的block运行状态，进入和退出group的次数必须匹配。
     //1.创建队列组
@@ -51,6 +64,7 @@
     //3.添加请求
     dispatch_group_async(group, queue, ^{
         dispatch_group_enter(group);
+        //1
         [self requestTopWithSuccessCallBack:^(NSArray *array) {
             self.topArr = array;
             dispatch_group_leave(group);
@@ -61,6 +75,7 @@
     });
     dispatch_group_async(group, queue, ^{
         dispatch_group_enter(group);
+        //2
         [self requestShehuiWithSuccessCallBack:^(NSArray *array) {
             self.shehuiArr = array;
             dispatch_group_leave(group);
@@ -72,6 +87,7 @@
     
     dispatch_group_async(group, queue, ^{
         dispatch_group_enter(group);
+        //3
         [self requestGuoneiWithSuccessCallBack:^(NSArray *array) {
             self.guoneiArr = array;
             dispatch_group_leave(group);
@@ -90,6 +106,7 @@
     });
 }
 
+//方法 二：
 -(void)requestAll_GCDSemaphore{
     //创建信号量
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
@@ -98,23 +115,48 @@
     dispatch_group_t group = dispatch_group_create();
     
     dispatch_group_async(group, queue, ^{
-        [HomeRequest getPointBuyAllConfigurationStrategyType:_dataType success:^(NSInteger code, NSDictionary *dict) {
+        //1
+        [self requestTopWithSuccessCallBack:^(NSArray *array) {
+            self.topArr = array;
             dispatch_semaphore_signal(semaphore);
-        } failuer:^(NSInteger code, NSString *message) {
-            dispatch_semaphore_signal(semaphore);
+        } failCallback:^(bool isFail) {
+             dispatch_semaphore_signal(semaphore);
         }];
+  
     });
     dispatch_group_async(group, queue, ^{
-        [HomeRequest getStockLeverRiskStockCode:_buyingStrategyModel.stockCode strategyType:_dataType success:^(NSInteger code, NSDictionary *dict) {
+        //2
+        [self requestShehuiWithSuccessCallBack:^(NSArray *array) {
+            self.shehuiArr = array;
             dispatch_semaphore_signal(semaphore);
-        } failuer:^(NSInteger code, NSString *message) {
+        } failCallback:^(bool isFail) {
             dispatch_semaphore_signal(semaphore);
         }];
+
     });
+    
+    dispatch_group_async(group, queue, ^{
+        //3
+        [self requestGuoneiWithSuccessCallBack:^(NSArray *array) {
+            self.guoneiArr = array;
+            dispatch_semaphore_signal(semaphore);
+        } failCallback:^(bool isFail) {
+            dispatch_semaphore_signal(semaphore);
+        }];
+        
+    });
+    
     dispatch_group_notify(group, queue, ^{
         dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
         dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
         NSLog(@"信号量为0");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // 通知主线程刷新 神马的
+            [self.mainTable.mj_header endRefreshing];
+            [self.mainTable reloadData];
+        });
+        
     });
 }
 

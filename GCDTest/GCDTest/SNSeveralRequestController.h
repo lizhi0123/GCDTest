@@ -12,6 +12,6 @@
 
 @property (weak, nonatomic) IBOutlet UITableView *mainTable;
 
-
+@property(nonatomic,assign)int type;
 
 @end

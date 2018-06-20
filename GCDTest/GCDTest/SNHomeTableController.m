@@ -50,8 +50,10 @@
 }
 */
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    
     UIStoryboard *storyboard = [UIStoryboard    storyboardWithName:@"Main" bundle:[NSBundle mainBundle]];
     SNSeveralRequestController *controller = [storyboard instantiateViewControllerWithIdentifier:@"SNSeveralRequestController"];
+    controller.type = (int)indexPath.row;
     [self.navigationController pushViewController:controller animated:YES];
 }
 
